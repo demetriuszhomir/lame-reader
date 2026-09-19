@@ -9,7 +9,13 @@ class TextReaderTests(unittest.TestCase):
             parse_speak_request(b'{"text":" Hello. ","speed":1.2}'),
             ("Hello.", 1.2),
         )
-        for body in (b'{"text":""}', b'{"text":"Hello","speed":2}'):
+        self.assertEqual(parse_speak_request(b'{"text":"Slow","speed":0.2}'), ("Slow", 0.2))
+        self.assertEqual(parse_speak_request(b'{"text":"Fast","speed":2}'), ("Fast", 2.0))
+        for body in (
+            b'{"text":""}',
+            b'{"text":"Hello","speed":0.19}',
+            b'{"text":"Hello","speed":2.01}',
+        ):
             with self.assertRaises(ValueError):
                 parse_speak_request(body)
 

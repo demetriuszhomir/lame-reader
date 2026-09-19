@@ -79,8 +79,8 @@ def parse_speak_request(body: bytes) -> tuple[str, float]:
         raise ValueError("Text is empty")
     if len(text) > MAX_PHRASE_LENGTH:
         raise ValueError(f"Phrase is longer than {MAX_PHRASE_LENGTH} characters")
-    if not 0.6 <= speed <= 1.8:
-        raise ValueError("Speed must be between 0.6 and 1.8")
+    if not 0.2 <= speed <= 2.0:
+        raise ValueError("Speed must be between 0.2 and 2.0")
     return text, round(speed, 2)
 
 
