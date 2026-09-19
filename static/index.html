@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f3f0e9" />
+    <title>Lame Reader</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        color-scheme: light;
+        --controls-height: 190px;
+        --bg: #f3f0e9;
+        --surface: #fffdf8;
+        --surface-strong: #ffffff;
+        --text: #25231f;
+        --muted: #6c675e;
+        --line: #ddd7cc;
+        --accent: #335c67;
+        --accent-text: #ffffff;
+        --active: #dbe8e7;
+        --shadow: 0 16px 48px rgba(54, 45, 32, 0.1);
+      }
+
+      [data-theme="light-solar"] {
+        --bg: #eee8d5;
+        --surface: #fdf6e3;
+        --surface-strong: #fffaf0;
+        --text: #073642;
+        --muted: #657b83;
+        --line: #d6ceb7;
+        --accent: #268bd2;
+        --accent-text: #ffffff;
+        --active: #d9e8e4;
+      }
+
+      [data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #141619;
+        --surface: #1d2024;
+        --surface-strong: #25292e;
+        --text: #eff1f3;
+        --muted: #a9afb6;
+        --line: #373c43;
+        --accent: #8dc5c7;
+        --accent-text: #102123;
+        --active: #263f43;
+        --shadow: 0 16px 48px rgba(0, 0, 0, 0.26);
+      }
+
+      [data-theme="dark-solar"] {
+        color-scheme: dark;
+        --bg: #002b36;
+        --surface: #073642;
+        --surface-strong: #0c414d;
+        --text: #eee8d5;
+        --muted: #93a1a1;
+        --line: #31505a;
+        --accent: #b58900;
+        --accent-text: #fff7d3;
+        --active: #164b54;
+        --shadow: 0 16px 48px rgba(0, 20, 25, 0.34);
+      }
+
+      * { box-sizing: border-box; }
+
+      html { min-height: 100%; scroll-padding-bottom: calc(var(--controls-height) + 24px); background: var(--bg); }
+
+      body {
+        min-height: 100vh;
+        min-height: 100dvh;
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Roboto, system-ui, sans-serif;
+        transition: background 160ms ease, color 160ms ease;
+      }
+
+      button, textarea, select, input { font: inherit; }
+      button, select, input[type="range"] { touch-action: manipulation; }
+
+      button {
+        min-height: 44px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--surface-strong);
+        color: var(--text);
+        cursor: pointer;
+      }
+
+      button:hover { border-color: var(--accent); }
+      button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible {
+        outline: 3px solid color-mix(in srgb, var(--accent), transparent 55%);
+        outline-offset: 2px;
+      }
+
+      .shell {
+        width: min(100%, 920px);
+        min-height: 100dvh;
+        margin: 0 auto;
+        padding: 18px 14px calc(var(--controls-height) + 24px);
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 22px;
+      }
+
+      h1 { margin: 0; font-size: 1.05rem; letter-spacing: 0.01em; }
+      .counter { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+      .composer, .reader {
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .composer { padding: 16px; }
+      .composer h2 { margin: 2px 0 6px; font-size: clamp(1.45rem, 7vw, 2.6rem); line-height: 1.08; }
+      .composer p { margin: 0 0 18px; color: var(--muted); line-height: 1.5; }
+
+      textarea {
+        width: 100%;
+        min-height: 46dvh;
+        resize: vertical;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px;
+        background: var(--surface-strong);
+        color: var(--text);
+        font-size: 1rem;
+        line-height: 1.55;
+      }
+
+      .primary {
+        width: 100%;
+        margin-top: 12px;
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--accent-text);
+        font-weight: 700;
+      }
+
+      .reader { min-width: 0; padding: clamp(18px, 5vw, 52px); }
+      .reader[hidden], .composer[hidden], .controls[hidden] { display: none; }
+
+      .reader-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 26px; }
+      .reader-toolbar button { padding: 0 14px; background: transparent; }
+
+      article {
+        max-width: 38em;
+        margin: 0 auto;
+        font-family: var(--reader-font, Roboto), sans-serif;
+        font-size: var(--reader-size, 24px);
+        line-height: 1.72;
+        letter-spacing: 0.012em;
+        overflow-wrap: anywhere;
+        word-break: normal;
+      }
+
+      .phrase {
+        display: inline;
+        border-radius: 0.28em;
+        cursor: pointer;
+        transition: background 120ms ease, box-shadow 120ms ease;
+      }
+
+      .phrase:hover { background: color-mix(in srgb, var(--active), transparent 35%); }
+      .phrase.active {
+        background: var(--active);
+        box-shadow: 0 0 0 0.18em var(--active);
+      }
+
+      .controls {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 5;
+        border-top: 1px solid var(--line);
+        background: color-mix(in srgb, var(--surface), transparent 5%);
+        backdrop-filter: blur(18px);
+        padding: 10px max(14px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+      }
+
+      .controls-inner { width: min(100%, 900px); margin: 0 auto; }
+      .transport { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+      .transport button { display: grid; place-content: center; gap: 2px; padding: 5px; font-weight: 700; line-height: 1.1; }
+      .transport .play { border-color: var(--accent); background: var(--accent); color: var(--accent-text); }
+      .transport kbd { color: var(--muted); font-family: inherit; font-size: 0.66rem; font-weight: 500; }
+      .transport .play kbd { color: color-mix(in srgb, var(--accent-text), transparent 24%); }
+
+      .settings {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 14px;
+        margin-top: 10px;
+      }
+
+      label { display: grid; gap: 4px; color: var(--muted); font-size: 0.75rem; }
+      label span { display: flex; justify-content: space-between; gap: 10px; }
+      input[type="range"] { width: 100%; accent-color: var(--accent); }
+      select { min-height: 38px; border: 1px solid var(--line); border-radius: 9px; padding: 0 8px; background: var(--surface-strong); color: var(--text); }
+
+      .toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        min-height: 38px;
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .toggle input { width: 20px; height: 20px; accent-color: var(--accent); }
+      .status { min-height: 1.3em; margin: 8px 0 0; color: var(--muted); font-size: 0.78rem; text-align: center; }
+
+      @media (min-width: 720px) {
+        .shell { padding: 34px 24px calc(var(--controls-height) + 24px); }
+        .composer { padding: 30px; }
+        textarea { min-height: 52vh; }
+        .controls { padding-top: 12px; }
+        .controls-inner { display: grid; grid-template-columns: minmax(360px, 0.8fr) minmax(500px, 1.2fr); gap: 20px; align-items: center; }
+        .settings { margin-top: 0; grid-template-columns: repeat(3, minmax(100px, 1fr)); }
+        .status { grid-column: 1 / -1; margin: 0; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <h1>Lame Reader</h1>
+        <span class="counter" id="counter" aria-live="polite"></span>
+      </header>
+
+      <section class="composer" id="composer">
+        <h2>Paste your text.<br />Read phrase by phrase.</h2>
+        <p>Your text and settings stay in this browser.</p>
+        <textarea id="source" autofocus placeholder="Paste text to read…"></textarea>
+        <button class="primary" id="prepare">Start reading</button>
+      </section>
+
+      <section class="reader" id="reader" hidden>
+        <div class="reader-toolbar">
+          <button id="edit">← Edit text</button>
+          <span class="counter" id="progress"></span>
+        </div>
+        <article id="article"></article>
+      </section>
+    </main>
+
+    <section class="controls" id="controls" aria-label="Reading controls" hidden>
+      <div class="controls-inner">
+        <div class="transport">
+          <button id="previous" aria-label="Previous phrase" aria-keyshortcuts="J О" title="Previous phrase · J / О"><span>← Back</span><kbd>J</kbd></button>
+          <button class="play" id="play" aria-label="Play" aria-keyshortcuts="K Л" title="Read or pause · K / Л"><span id="playLabel">▶ Read</span><kbd>K</kbd></button>
+          <button id="repeat" aria-label="Repeat current phrase" aria-keyshortcuts="I Ш" title="Repeat · I / Ш"><span>↻ Repeat</span><kbd>I</kbd></button>
+          <button id="next" aria-label="Next phrase" aria-keyshortcuts="L Д" title="Next phrase · L / Д"><span>Next →</span><kbd>L</kbd></button>
+        </div>
+        <div class="settings">
+          <label>
+            <span>Speed <strong id="speedValue">1.0×</strong></span>
+            <input id="speed" type="range" min="0.6" max="1.8" step="0.1" value="1" />
+          </label>
+          <label>
+            <span>Volume <strong id="volumeValue">100%</strong></span>
+            <input id="volume" type="range" min="0" max="100" step="5" value="100" />
+          </label>
+          <label>
+            <span>Size <strong id="sizeValue">24</strong></span>
+            <input id="fontSize" type="range" min="18" max="38" step="1" value="24" />
+          </label>
+          <label>
+            <span>Font</span>
+            <select id="font">
+              <option value="Roboto">Roboto</option>
+              <option value="Atkinson Hyperlegible">Atkinson</option>
+            </select>
+          </label>
+          <label>
+            <span>Theme</span>
+            <select id="theme">
+              <option value="light">Light</option>
+              <option value="light-solar">Light · solarized</option>
+              <option value="dark">Dark</option>
+              <option value="dark-solar">Dark · solarized</option>
+            </select>
+          </label>
+          <label class="toggle"><span>Continue automatically</span><input id="auto" type="checkbox" checked /></label>
+          <p class="status" id="status" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+
+    <script>
+      const $ = (selector) => document.querySelector(selector);
+      const source = $("#source");
+      const composer = $("#composer");
+      const reader = $("#reader");
+      const controls = $("#controls");
+      const article = $("#article");
+      const audio = new Audio();
+      let phrases = [];
+      let current = 0;
+      let audioUrl = "";
+      let requestId = 0;
+
+      new ResizeObserver(() => {
+        const height = controls.hidden ? 0 : Math.ceil(controls.getBoundingClientRect().height);
+        document.documentElement.style.setProperty("--controls-height", `${height}px`);
+      }).observe(controls);
+
+      const saved = JSON.parse(localStorage.getItem("text-reader") || "{}");
+      source.value = saved.text || "";
+      $("#speed").value = saved.speed || "1";
+      $("#volume").value = saved.volume ?? "100";
+      $("#fontSize").value = saved.fontSize || "24";
+      $("#font").value = saved.font || "Roboto";
+      $("#theme").value = saved.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      $("#auto").checked = saved.auto !== false;
+
+      function save() {
+        localStorage.setItem("text-reader", JSON.stringify({
+          text: source.value,
+          speed: $("#speed").value,
+          volume: $("#volume").value,
+          fontSize: $("#fontSize").value,
+          font: $("#font").value,
+          theme: $("#theme").value,
+          auto: $("#auto").checked
+        }));
+      }
+
+      function applySettings() {
+        const theme = $("#theme").value;
+        document.documentElement.dataset.theme = theme;
+        document.querySelector('meta[name="theme-color"]').content = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+        article.style.setProperty("--reader-size", `${$("#fontSize").value}px`);
+        article.style.setProperty("--reader-font", `'${$("#font").value}'`);
+        audio.volume = Number($("#volume").value) / 100;
+        $("#speedValue").textContent = `${Number($("#speed").value).toFixed(1)}×`;
+        $("#volumeValue").textContent = `${$("#volume").value}%`;
+        $("#sizeValue").textContent = $("#fontSize").value;
+        save();
+      }
+
+      function splitText(text) {
+        const clean = text.replace(/\r\n?/g, "\n").replace(/[ \t]+/g, " ");
+        const splitLine = (line) => {
+          const segments = "Segmenter" in Intl
+            ? [...new Intl.Segmenter(undefined, { granularity: "sentence" }).segment(line)].map(({ segment }) => segment.trim())
+            : line.split(/(?<=[.!?…])\s+/u);
+          return segments.flatMap((segment) => {
+          if (segment.length <= 360) return [segment];
+          const parts = segment.split(/(?<=[,;:—–])\s+/u);
+          const chunks = [];
+          let chunk = "";
+          for (const part of parts) {
+            if (chunk && `${chunk} ${part}`.length > 360) {
+              chunks.push(chunk);
+              chunk = part;
+            } else {
+              chunk = chunk ? `${chunk} ${part}` : part;
+            }
+          }
+          if (chunk) chunks.push(chunk);
+          return chunks;
+          }).filter(Boolean);
+        };
+        const result = [];
+        let breaksBefore = 0;
+        let hasContent = false;
+        for (const rawLine of clean.split("\n")) {
+          if (hasContent) breaksBefore += 1;
+          const segments = splitLine(rawLine.trim());
+          if (!segments.length) continue;
+          segments.forEach((segment, index) => result.push({
+            text: segment,
+            breaksBefore: index === 0 ? breaksBefore : 0
+          }));
+          breaksBefore = 0;
+          hasContent = true;
+        }
+        return result;
+      }
+
+      function render() {
+        const nodes = [];
+        phrases.forEach((phrase, index) => {
+          for (let line = 0; line < phrase.breaksBefore; line += 1) nodes.push(document.createElement("br"));
+          const span = document.createElement("span");
+          span.className = "phrase";
+          span.dataset.index = index;
+          span.tabIndex = 0;
+          span.textContent = `${phrase.text} `;
+          nodes.push(span);
+        });
+        article.replaceChildren(...nodes);
+        selectPhrase(0, false);
+      }
+
+      function selectPhrase(index, scroll = true) {
+        current = Math.max(0, Math.min(index, phrases.length - 1));
+        document.querySelectorAll(".phrase").forEach((node, nodeIndex) => node.classList.toggle("active", nodeIndex === current));
+        const active = document.querySelector(".phrase.active");
+        if (scroll) active?.scrollIntoView({ behavior: "smooth", block: "center" });
+        $("#progress").textContent = phrases.length ? `${current + 1} / ${phrases.length}` : "";
+        $("#counter").textContent = phrases.length ? `${phrases.length} ${phrases.length === 1 ? "phrase" : "phrases"}` : "";
+      }
+
+      function stopAudio() {
+        requestId += 1;
+        audio.pause();
+        audio.removeAttribute("src");
+        audio.load();
+        if (audioUrl) URL.revokeObjectURL(audioUrl);
+        audioUrl = "";
+        $("#status").textContent = "";
+        $("#playLabel").textContent = "▶ Read";
+        $("#play").setAttribute("aria-label", "Play");
+      }
+
+      async function playCurrent(force = false) {
+        if (!phrases.length) return;
+        if (!force && audio.src && audio.paused && audio.currentTime > 0 && audio.currentTime < audio.duration) {
+          await audio.play();
+          return;
+        }
+
+        stopAudio();
+        const ownRequest = requestId;
+        $("#status").textContent = "Preparing audio…";
+        $("#playLabel").textContent = "…";
+        $("#play").setAttribute("aria-label", "Preparing audio");
+        try {
+          const response = await fetch("/api/speak", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: phrases[current].text, speed: Number($("#speed").value) })
+          });
+          if (!response.ok) throw new Error((await response.json()).error || "Synthesis failed");
+          const blob = await response.blob();
+          if (ownRequest !== requestId) return;
+          audioUrl = URL.createObjectURL(blob);
+          audio.src = audioUrl;
+          await audio.play();
+          $("#status").textContent = "";
+        } catch (error) {
+          if (ownRequest !== requestId) return;
+          if (error.name === "AbortError") {
+            $("#status").textContent = "";
+            return;
+          }
+          $("#status").textContent = error.message;
+          $("#playLabel").textContent = "▶ Read";
+          $("#play").setAttribute("aria-label", "Play");
+        }
+      }
+
+      function move(step, autoplay = true) {
+        const nextIndex = Math.max(0, Math.min(current + step, phrases.length - 1));
+        stopAudio();
+        selectPhrase(nextIndex);
+        if (autoplay) playCurrent(true);
+      }
+
+      $("#prepare").addEventListener("click", () => {
+        phrases = splitText(source.value);
+        if (!phrases.length) {
+          source.focus();
+          return;
+        }
+        save();
+        render();
+        composer.hidden = true;
+        reader.hidden = false;
+        controls.hidden = false;
+      });
+
+      $("#edit").addEventListener("click", () => {
+        stopAudio();
+        reader.hidden = true;
+        controls.hidden = true;
+        composer.hidden = false;
+        source.focus();
+      });
+
+      $("#play").addEventListener("click", () => audio.paused ? playCurrent() : audio.pause());
+      $("#previous").addEventListener("click", () => move(-1));
+      $("#next").addEventListener("click", () => move(1));
+      $("#repeat").addEventListener("click", () => playCurrent(true));
+
+      article.addEventListener("click", (event) => {
+        const phrase = event.target.closest(".phrase");
+        if (!phrase) return;
+        stopAudio();
+        selectPhrase(Number(phrase.dataset.index));
+        playCurrent(true);
+      });
+
+      article.addEventListener("keydown", (event) => {
+        if ((event.key === "Enter" || event.key === " ") && event.target.matches(".phrase")) event.target.click();
+      });
+
+      audio.addEventListener("play", () => {
+        $("#playLabel").textContent = "Ⅱ Pause";
+        $("#play").setAttribute("aria-label", "Pause");
+      });
+      audio.addEventListener("pause", () => {
+        $("#playLabel").textContent = "▶ Read";
+        $("#play").setAttribute("aria-label", "Play");
+      });
+      audio.addEventListener("ended", () => {
+        if ($("#auto").checked && current < phrases.length - 1) move(1);
+        else $("#status").textContent = current === phrases.length - 1 ? "Finished" : "";
+      });
+
+      ["#speed", "#volume", "#fontSize", "#font", "#theme", "#auto"].forEach((selector) => $(selector).addEventListener("input", applySettings));
+      source.addEventListener("input", save);
+      document.addEventListener("keydown", (event) => {
+        if (!composer.hidden || ["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName)) return;
+        if (event.repeat) return;
+        const key = event.key.toLowerCase();
+        if ([" ", "k", "л"].includes(key)) { event.preventDefault(); $("#play").click(); }
+        if (key === "arrowleft") move(-1, false);
+        if (key === "arrowright") move(1, false);
+        if (["j", "о"].includes(key)) { event.preventDefault(); $("#previous").click(); }
+        if (["l", "д"].includes(key)) { event.preventDefault(); $("#next").click(); }
+        if (["i", "ш"].includes(key)) $("#repeat").click();
+      });
+
+      applySettings();
+    </script>
+  </body>
+</html>
