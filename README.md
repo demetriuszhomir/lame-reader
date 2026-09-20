@@ -1,6 +1,6 @@
 # Lame Reader
 
-A local, mobile-first text reader powered by Piper TTS.
+Local text reader powered by Piper TTS.
 
 ## Run on Windows
 
